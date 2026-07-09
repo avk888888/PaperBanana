@@ -1,0 +1,9 @@
+{
+  "name": "AutoFigure",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11",
+  "postCreateCommand": "pip install --upgrade pip && if [ -f requirements.txt ]; then pip install -r requirements.txt -q; fi",
+  "forwardPorts": [
+    8000,
+    8501
+  ]
+}
