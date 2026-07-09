@@ -1,137 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AutoFigure - ICLR 2026</title>
-<style>
-* { margin: 0; padding: 0; box-sizing: border-box; }
-body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-  background: #f8f9fa; color: #333; line-height: 1.6;
-}
-.header {
-  background: linear-gradient(135deg, #1a237e, #283593);
-  color: white; padding: 3rem 1rem; text-align: center;
-}
-.header h1 { font-size: 2.2rem; margin-bottom: .5rem; }
-.header p { font-size: 1.1rem; opacity: .9; }
-.header .badge { margin-top: 1rem; }
-.header .badge img { height: 28px; margin: 0 3px; }
-.container { max-width: 900px; margin: 0 auto; padding: 2rem 1rem; }
-.section { margin-bottom: 2.5rem; }
-.section h2 { font-size: 1.5rem; color: #1a237e; margin-bottom: 1rem; padding-bottom: .5rem; border-bottom: 2px solid #e8eaf6; }
-.features { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1rem; }
-.feature-card {
-  background: white; border-radius: 8px; padding: 1.2rem;
-  box-shadow: 0 1px 3px rgba(0,0,0,.1);
-}
-.feature-card h3 { font-size: 1.1rem; margin-bottom: .4rem; }
-.feature-card p { font-size: .9rem; color: #666; }
-.btn {
-  display: inline-block; padding: .6rem 1.5rem; border-radius: 6px;
-  text-decoration: none; font-weight: 500; margin: .3rem;
-}
-.btn-primary { background: #1a237e; color: white; }
-.btn-secondary { background: #e8eaf6; color: #1a237e; }
-.btn:hover { opacity: .85; }
-.links { text-align: center; margin: 2rem 0; }
-footer { text-align: center; color: #999; font-size: .85rem; padding: 2rem; }
-</style>
-</head>
-<body>
-
-<div class="header">
-  <h1>AutoFigure</h1>
-  <p>Generating and Refining Publication-Ready Scientific Illustrations</p>
-  <p><em>ICLR 2026</em></p>
-  <div class="badge">
-    <img src="https://img.shields.io/badge/ICLR-2026-blue?style=for-the-badge" alt="ICLR 2026">
-    <img src="https://img.shields.io/badge/License-MIT-yellow.svg?style=for-the-badge" alt="MIT">
-  </div>
-</div>
-
-<div class="container">
-
-  <div class="links">
-    <a class="btn btn-primary" href="https://github.com/ResearAI/AutoFigure">GitHub</a>
-    <a class="btn btn-secondary" href="https://arxiv.org/abs/2602.03828">Paper</a>
-    <a class="btn btn-secondary" href="https://deepscientist.cc">Website</a>
-    <a class="btn btn-secondary" href="https://huggingface.co/datasets/WestlakeNLP/FigureBench">Dataset</a>
-  </div>
-
-  <div class="section">
-    <h2>About</h2>
-    <p>AutoFigure is an intelligent system that leverages Large Language Models (LLMs) with iterative refinement to generate high-quality scientific figures from text descriptions or research papers. From text to publication-ready diagrams.</p>
-  </div>
-
-  <div class="section">
-    <h2>Features</h2>
-    <div class="features">
-      <div class="feature-card">
-        <h3>📝 Text-to-Figure</h3>
-        <p>Generate figures directly from natural language descriptions.</p>
-      </div>
-      <div class="feature-card">
-        <h3>📄 Paper-to-Figure</h3>
-        <p>Extract methodology from PDFs and create visual diagrams.</p>
-      </div>
-      <div class="feature-card">
-        <h3>🔄 Iterative Refinement</h3>
-        <p>Dual-agent system for continuous quality optimization.</p>
-      </div>
-      <div class="feature-card">
-        <h3>🎨 Multiple Formats</h3>
-        <p>Output as SVG or mxGraph XML (compatible with draw.io).</p>
-      </div>
-      <div class="feature-card">
-        <h3>💅 Image Enhancement</h3>
-        <p>AI-powered post-processing for aesthetic beautification.</p>
-      </div>
-      <div class="feature-card">
-        <h3>🖥️ Web Interface</h3>
-        <p>Interactive Next.js frontend for easy generation.</p>
-      </div>
-    </div>
-  </div>
-
-  <div class="section">
-    <h2>How It Works</h2>
-    <p>AutoFigure employs a <strong>Review-Refine</strong> loop: (1) <strong>Generate</strong> — creates SVG/XML from description; (2) <strong>Evaluate</strong> — scores quality and provides feedback; (3) <strong>Refine</strong> — continues until publication standards are met.</p>
-  </div>
-
-  <div class="section">
-    <h2>Quick Start</h2>
-    <pre style="background:#f5f5f5;padding:1rem;border-radius:6px;overflow-x:auto;font-size:.85rem;">
-git clone https://github.com/ResearAI/AutoFigure.git
-cd AutoFigure
-pip install -e .
-playwright install chromium
-
-# Python usage:
-from autofigure import AutoFigureAgent, Config
-config = Config(generation_api_key="your-api-key")
-agent = AutoFigureAgent(config)
-result = agent.generate("Transformer architecture diagram")
-result.save("output.svg")</pre>
-  </div>
-
-  <div class="section">
-    <h2>Citation</h2>
-    <pre style="background:#f5f5f5;padding:1rem;border-radius:6px;font-size:.85rem;">
-@inproceedings{autofigure2026,
-  title={AutoFigure: Generating and Refining Publication-Ready Scientific Illustrations},
-  booktitle={ICLR},
-  year={2026}
-}</pre>
-  </div>
-
-</div>
-
-<footer>
-  <p>AutoFigure &copy; 2026 &middot; ICLR 2026 &middot; MIT License</p>
-</footer>
-
+<head><meta charset="UTF-8"><title>AutoFigure</title></head>
+<body style="font-family:sans-serif;max-width:800px;margin:auto;padding:2rem">
+<h1>AutoFigure</h1>
+<p>Generating and Refining Publication-Ready Scientific Illustrations</p>
+<p><em>ICLR 2026</em></p>
+<p><a href="https://github.com/ResearAI/AutoFigure">GitHub</a> | <a href="https://arxiv.org/abs/2602.03828">Paper</a></p>
+<hr>
+<h2>Features</h2>
+<ul>
+<li>Text-to-Figure generation</li>
+<li>Paper-to-Figure extraction</li>
+<li>Iterative refinement with LLM</li>
+<li>SVG and mxGraph XML output</li>
+</ul>
 </body>
 </html>
