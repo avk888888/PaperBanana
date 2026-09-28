@@ -1,0 +1,9 @@
+# Windows 批次檔一律使用 CRLF 換行
+# 避免因為 git 的 autocrlf 設定不同，導致下載到的 .bat 變成 LF 而在 cmd 中行為不一致
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# 圖片是二進位檔，不要做任何換行轉換
+*.webp binary
+*.png  binary
+*.jpg  binary
