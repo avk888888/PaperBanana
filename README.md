@@ -39,6 +39,11 @@ python PaperBanana.py
 
 每次生成會在 `pb_output/runs/` 下建立一個資料夾，保留每一輪的圖片與規劃紀錄。
 
+> ⚠️ **修改 `PaperBanana.bat` 時請保持純 ASCII（不要寫中文）**
+> Windows 的 cmd.exe 連 `rem` 註解行裡的中文都會解析錯亂，
+> 導致批次檔執行時噴出一堆「不是內部或外部命令」的錯誤。
+> 說明文件寫中文就好，`.bat` 保持英文。
+
 ## 運作流程
 
 ```
