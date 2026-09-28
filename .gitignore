@@ -17,3 +17,6 @@ venv/
 # 系統
 .DS_Store
 Thumbs.db
+
+# Git Credential Manager 的暫存檔（dotnet-suggest 註冊失敗時會產生）
+system-commandline-sentinel-files/
