@@ -1,0 +1,19 @@
+# 金鑰與環境設定 —— 絕對不要進版本控制
+.openrouter_key
+.paperbanana_key
+.env
+.env.local
+
+# 生成結果 —— 每次執行都會產生，體積大且無備份價值
+pb_output/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+venv/
+
+# 系統
+.DS_Store
+Thumbs.db

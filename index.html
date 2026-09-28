@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PaperBanana — 輸入一段文字，產出論文級示意圖</title>
+
+<!-- Google／社群分享時會抓這幾行來顯示預覽卡片 -->
+<meta name="description" content="PaperBanana 一鍵啟動版：在本機輸入一段方法論描述，透過 OpenRouter 呼叫 Gemini，自動生成論文風格的方法論示意圖，並可多輪精煉。">
+<meta property="og:title" content="PaperBanana — 輸入一段文字，產出論文級示意圖">
+<meta property="og:description" content="本機執行的 AI 論文插圖生成器：文字描述 → 視覺規劃 → 圖像生成 → 多輪精煉。">
+<meta property="og:type" content="website">
+<meta name="theme-color" content="#0f172a">
+
+<style>
+/* ═══════════════════════════════════════════════════════════════════════
+   【CSS 閱讀指南】給不熟悉 CSS 的人
+   ─────────────────────────────────────────────────────────────────────
+   CSS 的白話邏輯是：  「選一個東西」 → 「設定它的外觀」
+
+   格式永遠長這樣：
+       選誰 {  外觀屬性: 值;  }
+
+   例如：  h1 { color: red; }
+   意思是「所有 h1 標題，文字顏色改成紅色」
+
+   ── 本檔案的閱讀順序建議 ──
+   1. 先看 :root {}  ← 這裡是所有「顏色、尺寸」的集中設定處（像調色盤）
+                       想換顏色，90% 只要改這一段的數字就好
+   2. 再看 .wrap{}  ← 整頁的寬度與左右留白
+   3. 然後 .card{}  ← 每一塊白色方塊（卡片）的共同外觀
+   4. 最後看其他     ← 都是個別小東西的微調
+
+   ── 幾個一定會看到的符號 ──
+   .aaa       前面的點 = 「class 名稱」，HTML 裡寫 class="aaa"
+   #aaa       前面的井號 = 「id 名稱」，HTML 裡寫 id="aaa"
+   padding    內距 = 內容物跟邊框之間的距離（往內撐）
+   margin     外距 = 這個元素跟別人之間的距離（往外推）
+   gap        間距 = 格子跟格子之間的縫
+   var(--x)   引用上面 :root 定義好的變數
+   @media     螢幕尺寸條件，裡面寫「視窗小於某寬度時要怎麼變」
+   ═══════════════════════════════════════════════════════════════════════ */
+
+
+/* ───────────────────────────────────────────────
+   ① 調色盤（改顏色只要動這裡）
+   ─────────────────────────────────────────────── */
+:root{
+  --bg:      #0f172a;   /* 整頁底色：深藍黑 */
+  --card:    #1e293b;   /* 卡片底色：比底色再亮一點 */
+  --card2:   #16203a;   /* 卡片內層（像程式碼區塊）用 */
+  --border:  #334155;   /* 所有邊框線的顏色 */
+  --text:    #e2e8f0;   /* 主要文字：近白 */
+  --muted:   #94a3b8;   /* 次要文字：灰藍，用來說明 */
+  --dim:     #64748b;   /* 更淡的文字：像標籤、註解 */
+  --indigo:  #818cf8;   /* 品牌色之一：藍紫 */
+  --violet:  #c084fc;   /* 品牌色之一：紫 */
+  --sky:     #38bdf8;   /* 品牌色之一：天藍 */
+  --green:   #34d399;   /* 表示「成功／可以」 */
+  --radius:  16px;      /* 圓角半徑：數字越大越圓 */
+}
+
+
+/* ───────────────────────────────────────────────
+   ② 全部元素歸零（讓各瀏覽器起跑點一致）
+   ─────────────────────────────────────────────── */
+*{
+  box-sizing:border-box;   /* 讓 padding 算在寬度「裡面」，版面才好掌控 */
+  margin:0;                /* 清掉瀏覽器預設的外距 */
+  padding:0;               /* 清掉瀏覽器預設的內距 */
+}
+
+
+/* ───────────────────────────────────────────────
+   ③ 整頁本體
+   ─────────────────────────────────────────────── */
+body{
+  background:var(--bg);
+  color:var(--text);
+  /* 字型：優先用系統內建，中文在 Windows 會用微軟正黑體 */
+  font-family:system-ui, -apple-system, "Segoe UI", "Microsoft JhengHei", "Noto Sans TC", sans-serif;
+  line-height:1.75;        /* 行高：1.75 倍字高，讀起來比較鬆 */
+  padding:0 20px;          /* 手機上左右留 20px，文字不會貼邊 */
+  -webkit-font-smoothing:antialiased;
+}
+
+
+/* ───────────────────────────────────────────────
+   ④ 內容容器：把整頁寬度鎖住並置中
+   ─────────────────────────────────────────────── */
+.wrap{
+  max-width:1080px;        /* 最寬 1080px，太寬的眼睛很難掃描 */
+  margin:0 auto;           /* 上下 0、左右 auto = 自動置中 */
+}
+
+
+/* ───────────────────────────────────────────────
+   ⑤ Hero（最上方主視覺）
+   ─────────────────────────────────────────────── */
+.hero{
+  text-align:center;
+  padding:70px 0 50px;     /* 上 70、左右 0、下 50 */
+}
+.hero .emoji{
+  font-size:56px;
+  line-height:1;
+  display:block;
+  margin-bottom:14px;
+}
+.hero h1{
+  font-size:clamp(30px, 5vw, 46px);   /* 字級會隨螢幕縮放，最小30最大46 */
+  letter-spacing:-.02em;
+  /* 讓文字有漸層色（這三行是標準寫法，改顏色改上面那兩個色碼） */
+  background:linear-gradient(135deg, var(--sky), var(--indigo), var(--violet));
+  -webkit-background-clip:text;
+  background-clip:text;
+  color:transparent;       /* 文字本身透明，才會透出背景漸層 */
+}
+.hero .sub{
+  max-width:640px;
+  margin:16px auto 0;
+  color:var(--muted);
+  font-size:17px;
+}
+
+/* 標籤列（Python / Flask / OpenRouter…） */
+.tags{
+  display:flex;
+  flex-wrap:wrap;          /* 空間不夠就自動換行 */
+  gap:8px;
+  justify-content:center;
+  margin-top:26px;
+}
+.tag{
+  font-size:13px;
+  color:var(--muted);
+  background:var(--card);
+  border:1px solid var(--border);
+  padding:5px 14px;
+  border-radius:999px;     /* 999px = 膠囊狀（全圓角） */
+}
+
+
+/* ───────────────────────────────────────────────
+   ⑥ 通用卡片
+   ─────────────────────────────────────────────── */
+.card{
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:28px;
+  margin-bottom:22px;
+}
+.card h2{
+  font-size:20px;
+  margin-bottom:6px;
+}
+.card h2 .n{                /* 標題前面的編號 */
+  color:var(--indigo);
+  margin-right:8px;
+  font-variant-numeric:tabular-nums;
+}
+.card p{ color:var(--muted); }
+.card p + p{ margin-top:12px; }
+
+
+/* ───────────────────────────────────────────────
+   ⑦ 三欄小卡（「這是什麼」那一段）
+   ─────────────────────────────────────────────── */
+.grid3{
+  display:grid;
+  /* auto-fit + minmax = 自動看螢幕寬度決定排幾欄，每欄最少 240px */
+  grid-template-columns:repeat(auto-fit, minmax(240px, 1fr));
+  gap:16px;
+  margin-top:20px;
+}
+.mini{
+  background:var(--card2);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:18px;
+}
+.mini .ico{ font-size:24px; display:block; margin-bottom:8px; }
+.mini h3{ font-size:15px; margin-bottom:6px; }
+.mini p{ font-size:14px; color:var(--dim); }
+
+
+/* ───────────────────────────────────────────────
+   ⑧ 流程步驟（直的清單 + 左側圓形編號）
+   ─────────────────────────────────────────────── */
+.steps{ margin-top:18px; }
+.step{
+  display:flex;
+  gap:16px;
+  padding:16px 0;
+  border-bottom:1px dashed var(--border);   /* dashed = 虛線 */
+}
+.step:last-child{ border-bottom:none; }     /* 最後一項不要虛線 */
+.step .num{
+  flex:0 0 34px;              /* 固定 34px 寬，不會被壓縮 */
+  height:34px;
+  border-radius:50%;
+  background:var(--card2);
+  border:1px solid var(--border);
+  color:var(--indigo);
+  font-size:14px;
+  font-weight:700;
+  display:flex;
+  align-items:center;         /* 垂直置中 */
+  justify-content:center;     /* 水平置中 */
+}
+.step h3{ font-size:15px; margin-bottom:2px; }
+.step p{ font-size:14px; color:var(--dim); }
+.step code{
+  font-size:12.5px;
+  color:var(--sky);
+  background:var(--card2);
+  padding:1px 7px;
+  border-radius:6px;
+}
+
+
+/* ───────────────────────────────────────────────
+   ⑨ 圖片展示
+   ─────────────────────────────────────────────── */
+.gallery{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(300px, 1fr));
+  gap:18px;
+  margin-top:20px;
+}
+figure{
+  background:var(--card2);
+  border:1px solid var(--border);
+  border-radius:12px;
+  overflow:hidden;           /* 讓圖片角落跟著外框一起變圓 */
+}
+figure img{
+  width:100%;                /* 圖片自動填滿格子寬度 */
+  height:auto;
+  display:block;             /* 移除圖片底下預設的縫隙 */
+  background:#fff;           /* 生成圖多半是白底，載入前先撐白避免閃黑 */
+}
+figcaption{
+  padding:14px;
+  font-size:13.5px;
+  color:var(--muted);
+  border-top:1px solid var(--border);
+}
+figcaption b{
+  display:block;
+  color:var(--text);
+  font-size:14px;
+  margin-bottom:4px;
+}
+figcaption .kind{
+  display:inline-block;
+  margin-top:8px;
+  font-size:11.5px;
+  color:var(--sky);
+  border:1px solid var(--border);
+  padding:2px 9px;
+  border-radius:999px;
+}
+
+/* 精煉前後並排（兩欄） */
+.beforeafter{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:18px;
+  margin-top:20px;
+}
+.beforeafter .cap{
+  text-align:center;
+  font-size:13px;
+  color:var(--dim);
+  padding:10px 0 0;
+}
+.beforeafter .cap strong{ color:var(--text); }
+
+
+/* ───────────────────────────────────────────────
+   ⑩ 程式碼區塊
+   ─────────────────────────────────────────────── */
+pre{
+  background:var(--card2);
+  border:1px solid var(--border);
+  border-radius:12px;
+  padding:18px;
+  overflow-x:auto;            /* 太寬就出現橫向捲軸，不會撐破版面 */
+  margin-top:18px;
+  font-size:13.5px;
+  line-height:1.7;
+}
+pre code{
+  font-family:"Cascadia Code", "Consolas", "SF Mono", Menlo, monospace;
+  color:#cbd5e1;
+}
+pre .c{ color:var(--dim); }        /* 註解：灰 */
+pre .k{ color:var(--violet); }     /* 指令：紫 */
+
+
+/* ───────────────────────────────────────────────
+   ⑪ 表格（技術細節）
+   ─────────────────────────────────────────────── */
+.tbl{
+  width:100%;
+  border-collapse:collapse;   /* 讓格線不要有雙線 */
+  margin-top:18px;
+  font-size:14px;
+}
+.tbl th, .tbl td{
+  text-align:left;
+  padding:11px 12px;
+  border-bottom:1px solid var(--border);
+}
+.tbl th{
+  color:var(--dim);
+  font-weight:600;
+  font-size:12.5px;
+  text-transform:uppercase;
+  letter-spacing:.05em;
+}
+.tbl td{ color:var(--muted); }
+.tbl td:first-child{ color:var(--text); }
+
+
+/* ───────────────────────────────────────────────
+   ⑫ 提示方塊（警示）
+   ─────────────────────────────────────────────── */
+.note{
+  border-left:3px solid var(--indigo);     /* 左邊一條粗線做提示 */
+  background:var(--card2);
+  padding:16px 18px;
+  border-radius:0 12px 12px 0;
+  margin-top:18px;
+  font-size:14px;
+  color:var(--muted);
+}
+.note b{ color:var(--text); }
+.note.warn{ border-left-color:#fbbf24; }   /* 黃色版＝提醒 */
+
+
+/* ───────────────────────────────────────────────
+   ⑬ 頁尾
+   ─────────────────────────────────────────────── */
+footer{
+  text-align:center;
+  padding:44px 0 60px;
+  color:var(--dim);
+  font-size:13px;
+}
+footer a{ color:var(--sky); text-decoration:none; }
+footer a:hover{ text-decoration:underline; }
+
+
+/* ───────────────────────────────────────────────
+   ⑭ 手機版微調（視窗寬度 ≤ 700px 時生效）
+   ─────────────────────────────────────────────── */
+@media (max-width:700px){
+  .hero{ padding:44px 0 34px; }
+  .card{ padding:20px; }
+  .beforeafter{ grid-template-columns:1fr; }  /* 前後對照改成上下堆疊 */
+  .tbl{ font-size:13px; }
+  .tbl th, .tbl td{ padding:9px 8px; }
+}
+</style>
+</head>
+
+<body>
+<div class="wrap">
+
+  <!-- ══════════ 主視覺 ══════════ -->
+  <header class="hero">
+    <span class="emoji">🍌</span>
+    <h1>PaperBanana</h1>
+    <p class="sub">
+      輸入一段方法論的文字描述，自動生成論文風格的方法論示意圖。<br>
+      本機執行、單一檔案、雙擊即開，支援多輪自我精煉。
+    </p>
+    <div class="tags">
+      <span class="tag">Python</span>
+      <span class="tag">Flask</span>
+      <span class="tag">OpenRouter</span>
+      <span class="tag">Gemini 2.5 Flash</span>
+      <span class="tag">Windows 一鍵啟動</span>
+    </div>
+  </header>
+
+  <!-- ══════════ 這是什麼 ══════════ -->
+  <section class="card">
+    <h2><span class="n">01</span>這是什麼？</h2>
+    <p>
+      PaperBanana 是一套「論文插圖自動生成」工具。你不需要會畫圖或排版，
+      只要用自然語言描述你的方法流程，它就會產出一張可以直接放進論文的示意圖。
+    </p>
+
+    <div class="grid3">
+      <div class="mini">
+        <span class="ico">✍️</span>
+        <h3>文字進，圖片出</h3>
+        <p>中文或英文描述都可以。段落、Markdown 表格、甚至整篇方法論都能當輸入。</p>
+      </div>
+      <div class="mini">
+        <span class="ico">🔁</span>
+        <h3>多輪自我精煉</h3>
+        <p>每一次生成後會自我檢查並重畫，迭代次數可調（1～10 輪），越多次越精緻。</p>
+      </div>
+      <div class="mini">
+        <span class="ico">💻</span>
+        <h3>完全在本機跑</h3>
+        <p>用瀏覽器開本機的 5051 埠操作，資料不經過任何第三方伺服器，除了模型 API。</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════ 運作流程 ══════════ -->
+  <section class="card">
+    <h2><span class="n">02</span>它怎麼運作？</h2>
+    <p>整個流程分四步，每一步都由大型模型驅動：</p>
+
+    <div class="steps">
+      <div class="step">
+        <div class="num">1</div>
+        <div>
+          <h3>你輸入描述</h3>
+          <p>在網頁介面的文字框寫下方法論內容，例如「我們提出一個具多頭注意力與前饋網路的分類模型」。</p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">2</div>
+        <div>
+          <h3>視覺規劃（Planner）</h3>
+          <p>
+            語言模型把抽象文字翻譯成一份「版面規劃書」：哪裡放哪個區塊、箭頭往哪走、用什麼配色。
+            使用的模型是 <code>google/gemini-2.5-flash</code>。
+          </p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">3</div>
+        <div>
+          <h3>圖像生成（Visualizer）</h3>
+          <p>
+            圖像模型依規劃書把圖畫出來，使用 <code>google/gemini-3.1-flash-lite-image</code>。
+            這一步是整條流程中唯一會產生實際圖片的環節。
+          </p>
+        </div>
+      </div>
+      <div class="step">
+        <div class="num">4</div>
+        <div>
+          <h3>精煉迭代（Critic）</h3>
+          <p>
+            把剛生成的圖回頭對照原始描述，找出錯字、箭頭方向錯誤、擁擠的區塊，
+            改寫規劃書後重畫。重複到設定的次數為止，最後一輪的結果就是成品。
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="note">
+      <b>補充：</b>這套流程源自 Google Cloud AI Research 與北京大學的論文
+      《PaperBanana: Automating Academic Illustration for AI Scientists》，
+      原框架共有五個角色（Retriever、Planner、Stylist、Visualizer、Critic）。
+      本專案是精簡後的單機版本，保留最核心的「規劃 → 生成 → 精煉」循環。
+    </div>
+  </section>
+
+  <!-- ══════════ 實際輸出 ══════════ -->
+  <section class="card">
+    <h2><span class="n">03</span>實際輸出範例</h2>
+    <p>以下都是真實跑出來的結果，未經人工修圖。每張下方標註當初輸入的描述主題。</p>
+
+    <div class="gallery">
+
+      <figure>
+        <img src="assets/example-factorization.webp" width="1280" height="714" loading="lazy"
+             alt="質因數分解效率比較示意圖：左側說明試除法為何慢，右側為 Miller-Rabin 與 Pollard-Rho 混合策略">
+        <figcaption>
+          <b>演算法複雜度對比</b>
+          輸入是一段比較「試除法 vs Pollard-Rho vs 橢圓曲線法」的技術說明，
+          輸出成左→右的雙區塊對照流程圖。
+          <span class="kind">方法論流程圖</span>
+        </figcaption>
+      </figure>
+
+      <figure>
+        <img src="assets/example-quantum.webp" width="1280" height="714" loading="lazy"
+             alt="量子電腦與傳統密碼學對照示意圖，比較傳統電腦與量子電腦破解鎖機制的方式">
+        <figcaption>
+          <b>量子電腦 vs 傳統密碼學</b>
+          輸入是大量生活化比喻（門鎖、沙灘掃描儀），
+          模型自行收斂成「傳統視角 / 量子視角」的概念對照圖。
+          <span class="kind">概念對照圖</span>
+        </figcaption>
+      </figure>
+
+      <figure>
+        <img src="assets/example-portfolio.webp" width="1264" height="848" loading="lazy"
+             alt="加密資產配置資訊圖表，含核心衛星配置權重、各幣種關鍵價位與組合規則">
+        <figcaption>
+          <b>加密資產配置總表</b>
+          輸入是一份 Markdown 表格（9 種幣的權重與價位），
+          輸出把純表格轉成有分區色塊的資訊圖表。
+          <span class="kind">表格轉資訊圖表</span>
+        </figcaption>
+      </figure>
+
+      <figure>
+        <img src="assets/example-stickers.webp" width="1280" height="714" loading="lazy"
+             alt="八張泰迪熊貼圖設計，2 乘 4 網格排列，搭配早安、你好、謝謝等字樣">
+        <figcaption>
+          <b>泰迪熊貼圖組</b>
+          同一套工具也能做創意插圖。輸入是「8 張貼圖、搭配早安／你好／謝謝」，
+          輸出為 2×4 網格的角色設計。
+          <span class="kind">創意插圖</span>
+        </figcaption>
+      </figure>
+
+    </div>
+  </section>
+
+  <!-- ══════════ 精煉前後 ══════════ -->
+  <section class="card">
+    <h2><span class="n">04</span>精煉迭代的作用</h2>
+    <p>
+      同一段輸入、同一個模型，差別只在「跑幾輪」。左邊是第 1 輪的原始輸出，
+      右邊是經過自我檢查修正後的最終版本。
+    </p>
+
+    <div class="beforeafter">
+      <figure>
+        <img src="assets/refine-before.webp" width="1000" height="558" loading="lazy"
+             alt="第 1 輪迭代的原始輸出">
+        <div class="cap"><strong>第 1 輪</strong>　初稿</div>
+      </figure>
+      <figure>
+        <img src="assets/refine-after.webp" width="1000" height="558" loading="lazy"
+             alt="經過精煉後的最終輸出">
+        <div class="cap"><strong>最終輪</strong>　修正後</div>
+      </figure>
+    </div>
+  </section>
+
+  <!-- ══════════ 如何執行 ══════════ -->
+  <section class="card">
+    <h2><span class="n">05</span>怎麼在自己的電腦跑？</h2>
+    <p>需要三個東西：Python 環境、一個 OpenRouter API Key、以及這個資料夾的檔案。</p>
+
+<pre><code><span class="c"># 1. 安裝相依套件（只需做一次）</span>
+<span class="k">pip</span> install flask paperbanana
+
+<span class="c"># 2. 把 OpenRouter API Key 存成檔案
+#    在資料夾裡建立 .openrouter_key，內容只放那一行金鑰
+#    或把金鑰貼進 PaperBanana.py 最上面的 KEY_CONTENT 變數</span>
+
+<span class="c"># 3. 啟動（Windows 直接雙擊 PaperBanana.bat 也可以）</span>
+<span class="k">python</span> PaperBanana.py
+
+<span class="c"># 4. 瀏覽器會自動開啟 http://localhost:5051</span>
+<span class="c">#    輸入描述 → 設定 Refine 次數 → 按 Generate</span></code></pre>
+
+    <div class="note warn">
+      <b>重要：這一頁不能直接執行這個工具。</b>
+      它是純靜態的展示頁面（只有 HTML 和圖片），沒有任何後端。
+      真正的生成功能需要本機的 Python 環境、以及你的 API Key，
+      這在 GitHub Pages 這類純靜態空間上是做不到的。
+    </div>
+
+    <div class="note">
+      <b>費用提醒：</b>每次按下 Generate 都會實際呼叫 OpenRouter 並產生費用，
+      費用高低取決於 Refine 次數。次數越多，圖越細緻但花費也會等比增加。
+    </div>
+  </section>
+
+  <!-- ══════════ 技術細節 ══════════ -->
+  <section class="card">
+    <h2><span class="n">06</span>技術細節</h2>
+
+    <table class="tbl">
+      <tr><th>元件</th><th>選用</th><th>用途</th></tr>
+      <tr>
+        <td>網頁框架</td><td>Flask</td>
+        <td>提供單一頁面與 <code>/api/generate</code> 介面，跑在本機 5051 埠</td>
+      </tr>
+      <tr>
+        <td>生成框架</td><td>paperbanana 套件</td>
+        <td>負責規劃、生成、精煉的完整流程編排</td>
+      </tr>
+      <tr>
+        <td>語言模型（VLM）</td><td>google/gemini-2.5-flash</td>
+        <td>讀懂描述、規劃版面、檢查錯誤</td>
+      </tr>
+      <tr>
+        <td>圖像模型</td><td>google/gemini-3.1-flash-lite-image</td>
+        <td>把規劃書實際畫成圖片</td>
+      </tr>
+      <tr>
+        <td>路由服務</td><td>OpenRouter</td>
+        <td>用單一 API Key 呼叫上述兩種模型</td>
+      </tr>
+      <tr>
+        <td>輸出位置</td><td>pb_output/runs/</td>
+        <td>每次生成建立一個資料夾，保留各輪圖片與規劃紀錄</td>
+      </tr>
+    </table>
+  </section>
+
+  <!-- ══════════ 出處 ══════════ -->
+  <section class="card">
+    <h2><span class="n">07</span>出處與致謝</h2>
+    <p>
+      本工具的方法論來自 <b>PaperBanana: Automating Academic Illustration for AI Scientists</b>
+      （Dawei Zhu、Rui Meng、Yale Song、Xiyu Wei、Sujian Li、Tomas Pfister、Jinsung Yoon，
+      arXiv:2601.23265，Google Cloud AI Research／北京大學）。
+      原始框架後續以 PaperVizAgent 之名開源於 Google Research。
+    </p>
+    <p>
+      本頁與此 repo 是基於該論文與公開套件所做的個人單機版整合，
+      與原作者、Google 無隸屬或背書關係。學術引用請引用原論文。
+    </p>
+  </section>
+
+  <footer>
+    <p>🍌 PaperBanana 一鍵啟動版　·　本頁為靜態展示頁面</p>
+  </footer>
+
+</div>
+</body>
+</html>
